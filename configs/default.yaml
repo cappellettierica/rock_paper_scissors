@@ -1,7 +1,6 @@
 # default configuration for rps cnn 
 seed: 42 # reproducibility 
- 
-data_dir: "C:/Users/sergi/Documents/rock_paper_scissors/data"
+data_dir: "data"
 
 # image settings
 img_size: [128, 128]    # resize 
