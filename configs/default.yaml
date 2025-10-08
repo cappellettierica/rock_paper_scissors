@@ -3,39 +3,30 @@ seed: 42 # reproducibility
 data_dir: "data"
 
 # image settings
-img_size: [128, 128]    # resize 
+img_size: [128, 128]    # resize because 200x300 takes 2h to run. compare accurancy?
 batch_size: 32          # of images processed together
-test_size: 0.15         # 15% of data for final test
-val_size: 0.15          # 15% for validation for tuning
-augment: true           # apply image augmentation for training 
+test_size: 0.15         
+val_size: 0.15          
+augment: true           # image augmentation for training 
 
-# CNN model configurations
 models:
   tiny_cnn:
     type: "tiny"
     lr: 0.001
-    dropout: 0.2
-    epochs: 10
+    dropout: 0.3
+    epochs: 15
+    augment: "basic"          
 
   small_cnn:
     type: "small"
-    lr: 0.001
+    lr: 0.0005
     dropout: 0.3
     epochs: 15
+    augment: "green_strong"   # stronger aug: replace green bg + flips/rot/etc.
 
-  medium_cnn:
-    type: "medium"
-    lr: 0.0005
-    dropout: 0.4
-    epochs: 20
-
-# hyperparameter search settings
-# only tuning the small CNN to demonstrate the hyperparameter search process 
-# if i do it for tiny andmedium too the running time is huge
-# in the requirements it's asked to use it on at least one model
 hparam_search:
   model: "small_cnn"
-  learning_rates: [0.001, 0.0005] # speed
-  dropouts: [0.2, 0.3, 0.4] # to avoid overfitting
-  batch_sizes: [32, 64] # images looked at per step 
-  max_trials: 6
+  learning_rates: [0.001, 0.0005]
+  dropouts: [0.3]
+  batch_sizes: [32]
+  max_trials: 2
