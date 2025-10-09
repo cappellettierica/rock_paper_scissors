@@ -27,15 +27,9 @@ def SmallCNN(img_size=(128, 128, 3), num_classes=3, dropout=0.3):
     return _build_cnn("SmallCNN", img_size, num_classes, dropout,
                       stages=[(32, 2), (64, 1), (128, 1)])
 
-def MediumCNN(img_size=(128, 128, 3), num_classes=3, dropout=0.4):
-    # [Conv 32 x2] -> Pool -> [Conv 64 x2] -> Pool -> [Conv 128 x2] -> GAP -> Dropout -> Dense
-    return _build_cnn("MediumCNN", img_size, num_classes, dropout,
-                      stages=[(32, 2), (64, 2), (128, 2)])
-
-def compile_model(model, lr=1e-3):
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
-        loss="categorical_crossentropy",
-        metrics=["accuracy"],
-    )
+def compile_model(model, lr=1e-3, label_smoothing=0.05): # label smoothing, wasn't generalsing well before 
+    opt = tf.keras.optimizers.Adam(learning_rate=lr)
+    loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=label_smoothing)
+    model.compile(optimizer=opt, loss=loss, metrics=["accuracy"])
     return model
+

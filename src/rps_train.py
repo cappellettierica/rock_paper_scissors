@@ -3,14 +3,14 @@ from sklearn.model_selection import StratifiedKFold
 from tensorflow.keras.callbacks import EarlyStopping
 from src.utils import set_seed, ensure_dir, save_json, short_ok
 from src.data import discover_images, make_splits, build_ds, class_counts, CLASSES
-from src.models import TinyCNN, SmallCNN, MediumCNN, compile_model
+from src.models import TinyCNN, SmallCNN, compile_model
 from src.eval import (
     metrics_from_preds, standardized_metrics_block, save_training_curves,
     save_class_distribution_bar, save_sample_grid, save_confusion_matrix_fig, save_misclassified_images
 )
 
 def make_model(kind, img_size, dropout):
-    models = {"tiny": TinyCNN, "small": SmallCNN, "medium": MediumCNN}
+    models = {"tiny": TinyCNN, "small": SmallCNN}
     return models[kind]((*img_size, 3), dropout=dropout)
 
 def main(cfg_path="configs/default.yaml"):
@@ -31,7 +31,7 @@ def main(cfg_path="configs/default.yaml"):
     figs_dir, rep_dir, art_dir = [os.path.join(out_dir, p) for p in ["figures","reports","artifacts"]]
     for d in [out_dir, figs_dir, rep_dir, art_dir]: ensure_dir(d)
 
-    # ----- data
+    # data
     paths, labels = discover_images(data_dir)
     dist = class_counts(labels)
     save_json({"class_distribution": dist, "image_shape": [*img_size,3]}, os.path.join(rep_dir, "data_exploration_summary.json"))
@@ -48,7 +48,7 @@ def main(cfg_path="configs/default.yaml"):
 
     metrics_list, comp_rows = [], []
 
-    # ----- training helper (per-model augmentation policy)
+    # training helper (per-model augmentation policy)
     def train_one(name, mcfg):
         policy = mcfg.get("augment", "none")
         use_aug = policy != "none"
