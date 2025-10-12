@@ -3,15 +3,15 @@ from sklearn.model_selection import StratifiedKFold
 from tensorflow.keras.callbacks import EarlyStopping
 from src.utils import set_seed, ensure_dir, save_json, short_ok
 from src.data import discover_images, make_splits, build_ds, class_counts, CLASSES
-from src.models import TinyCNN, SmallCNN, compile_model
+from src.models import TinyCNN, SmallCNN, MediumBaseCNN, compile_model
 from src.eval import (
     metrics_from_preds, standardized_metrics_block, save_training_curves,
     save_class_distribution_bar, save_sample_grid, save_confusion_matrix_fig, save_misclassified_images
 )
 
 def make_model(kind, img_size, dropout):
-    models = {"tiny": TinyCNN, "small": SmallCNN}
-    return models[kind]((*img_size, 3), dropout=dropout)
+    models = {"tiny": TinyCNN, "small": SmallCNN, "medium_base": MediumBaseCNN}
+    return models[kind](img_size=(*img_size, 3), num_classes=len(CLASSES), dropout=dropout)
 
 def main(cfg_path="configs/default.yaml"):
     with open(cfg_path, "r") as f:
@@ -48,7 +48,7 @@ def main(cfg_path="configs/default.yaml"):
 
     metrics_list, comp_rows = [], []
 
-    # training helper (per-model augmentation policy)
+    # training helper
     def train_one(name, mcfg):
         policy = mcfg.get("augment", "none")
         use_aug = policy != "none"
@@ -83,42 +83,47 @@ def main(cfg_path="configs/default.yaml"):
         params = int(np.sum([np.prod(v.shape) for v in model.trainable_variables]))
         comp_rows.append([name, params, acc, prec, rec, f1, train_time])
 
-    for name in ["tiny_cnn", "small_cnn"]:
+    for name in ["tiny_cnn", "small_cnn", "medium_base_cnn"]:
         train_one(name, model_cfgs[name])
 
-# applying hp tuning to small_cnn to get my medium_cnn
+# applying hp tuning to medium_base_cnn to get my medium_cnn
     hp = cfg.get("hparam_search", None) 
-    if hp and hp.get("model") == "small_cnn":
-        base = dict(model_cfgs["small_cnn"])
+    if hp and hp.get("model") == "medium_base_cnn":
+        base = dict(model_cfgs["medium_base_cnn"])
         dev_X = np.array(list(X_train) + list(X_val))
         dev_y = np.array(list(y_train) + list(y_val))
         kf = StratifiedKFold(n_splits=3, shuffle=True, random_state=cfg.get("seed",42))
 
         best, best_cv, results = None, -np.inf, []
-        print("[HP] 3-fold CV for small_cnn...")
+        print("[HP] 3-fold CV for medium_base_cnn...")
 
         for lr in hp["learning_rates"]:
             for dp in hp["dropouts"]:
                 for bs in hp["batch_sizes"]:
                     scores = []
                     for tr, va in kf.split(dev_X, dev_y):
-                        ds_tr = build_ds(dev_X[tr], dev_y[tr], img_size, int(bs), shuffle=True, augment=False)
+                        ds_tr = build_ds(dev_X[tr], dev_y[tr], img_size, int(bs), shuffle=True, augment=True,seed=cfg.get("seed", 42),augment_policy=base.get("augment", "none"))
                         ds_va = build_ds(dev_X[va], dev_y[va], img_size, int(bs), shuffle=False, augment=False)
-                        m = make_model("small", img_size, float(dp)); compile_model(m, float(lr))
-                        h = m.fit(ds_tr, validation_data=ds_va, epochs=max(5, int(base["epochs"]*0.4)), verbose=0)
+                        m = make_model("medium_base", img_size, float(dp)); compile_model(m, float(lr))
+                        # h = m.fit(ds_tr, validation_data=ds_va, epochs=max(5, int(base["epochs"]*0.4)), verbose=0)
+                        h = m.fit(
+                                    ds_tr, validation_data=ds_va,
+                                    epochs=max(5, int(base["epochs"]*0.4)), verbose=0,
+                                    callbacks=[EarlyStopping(monitor="val_accuracy", patience=2, restore_best_weights=True)]
+                                ) # early stopping the weak combos 
                         scores.append(max(h.history["val_accuracy"]))
                     mean_acc = float(np.mean(scores))
                     results.append({"lr": lr, "dropout": dp, "batch": bs, "val_acc": round(mean_acc,4)})
                     if mean_acc > best_cv:
                         best_cv, best = mean_acc, {"lr": lr, "dropout": dp, "batch": int(bs)}
 
-        save_json({"results": results, "best": best}, os.path.join(rep_dir, "hparam_search_small_cnn_cv.json"))
+        save_json({"results": results, "best": best}, os.path.join(rep_dir, "hparam_search_medium_base_cnn_cv.json"))
         short_ok(f"[HP] Best combo: {best} (mean val acc={round(best_cv,4)})")
 
         # final retrain with SAME strong aug as small_cnn (fair comparison) → save as medium_cnn
         ds_dev = build_ds(dev_X, dev_y, img_size, best["batch"], shuffle=True, augment=True,
                           seed=cfg.get("seed",42), augment_policy="green_strong").cache().prefetch(tf.data.AUTOTUNE)
-        m = make_model("small", img_size, float(best["dropout"]))
+        m = make_model("medium_base", img_size, float(best["dropout"]))
         compile_model(m, float(best["lr"]))
         hist = m.fit(ds_dev, epochs=int(base["epochs"]), verbose=2)
         save_training_curves(hist, figs_dir, "medium_cnn")
@@ -131,7 +136,7 @@ def main(cfg_path="configs/default.yaml"):
         save_misclassified_images(X_test, yt_true, np.argmax(yt_prob, 1), CLASSES, os.path.join("outputs","misclassified","medium_cnn"))
 
         m.save(os.path.join(art_dir, "medium_cnn.keras"))
-        mb = standardized_metrics_block("medium_cnn", acc, prec, rec, f1, notes=f"CV-tuned small CNN (best mean val acc={round(best_cv,4)})")
+        mb = standardized_metrics_block("medium_cnn", acc, prec, rec, f1, notes=f"CV-tuned medium_base CNN (best mean val acc={round(best_cv,4)})")
         metrics_list.append(mb)
         params = int(np.sum([np.prod(v.shape) for v in m.trainable_variables]))
         comp_rows.append(["medium_cnn", params, acc, prec, rec, f1, None])

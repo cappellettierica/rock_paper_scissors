@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 import tensorflow.keras as K
+import keras_cv as kcv
 from src.utils import short_ok, short_warn
 import cv2, random
 import numpy as np
@@ -89,10 +90,12 @@ def _decode_img(path, img_size):
     return img
 
 def build_ds(paths, labels, img_size=(128,128), batch_size=32,
-             shuffle=False, augment=False, seed=42, augment_policy="none"):
-    AUTOTUNE = tf.data.AUTOTUNE
+             shuffle=False, augment=False, seed=42,
+             augment_policy="none", rand_n=2, rand_m=0.3):
 
+    AUTOTUNE = tf.data.AUTOTUNE
     ds = tf.data.Dataset.from_tensor_slices((paths, labels))
+
     if shuffle:
         ds = ds.shuffle(buffer_size=len(paths), seed=seed, reshuffle_each_iteration=True)
 
@@ -106,9 +109,19 @@ def build_ds(paths, labels, img_size=(128,128), batch_size=32,
         if augment_policy == "green_strong":
             ds = ds.map(lambda x, y: (opencv_strong_augment_tf(x), y),
                         num_parallel_calls=AUTOTUNE)
+
         elif augment_policy == "basic":
             aug = _basic_aug_layer()
             ds = ds.map(lambda x, y: (aug(x, training=True), y),
+                        num_parallel_calls=AUTOTUNE)
+
+        elif augment_policy == "randaugment":
+            randaug = kcv.layers.RandAugment(
+                value_range=(0.0, 1.0),
+                augmentations_per_image=rand_n,  # N
+                magnitude=rand_m                 # M in [0,1]
+            )
+            ds = ds.map(lambda x, y: (randaug(x, training=True), y),
                         num_parallel_calls=AUTOTUNE)
 
     ds = ds.batch(batch_size).prefetch(AUTOTUNE)

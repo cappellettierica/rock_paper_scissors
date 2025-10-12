@@ -13,20 +13,27 @@ models:
   tiny_cnn:
     type: "tiny"
     lr: 0.001
-    dropout: 0.3
+    dropout: 0.2
     epochs: 15
     augment: "basic"          
 
   small_cnn:
     type: "small"
-    lr: 0.0005
+    lr: 0.001
     dropout: 0.3
+    epochs: 15
+    augment: "randaugment"  
+
+  medium_base_cnn:
+    type: "medium_base"
+    lr: 0.0005
+    dropout: 0.4  # reduce overfitting 
     epochs: 15
     augment: "green_strong"   # stronger aug: replace green bg + flips/rot/etc.
 
 hparam_search:
-  model: "small_cnn"
-  learning_rates: [0.001, 0.0005]
-  dropouts: [0.3]
+  model: "medium_base_cnn"
+  learning_rates: [0.0005, 0.001]
+  dropouts: [0.4, 0.5]
   batch_sizes: [32]
-  max_trials: 2
+  max_trials: 4
