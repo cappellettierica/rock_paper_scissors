@@ -1,8 +1,7 @@
 import numpy as np, pandas as pd, matplotlib.pyplot as plt, os
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, classification_report, confusion_matrix
 from src.utils import save_json, ensure_dir, short_ok
-import os, math, shutil, numpy as np, matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
+import os, math, shutil
 import tensorflow as tf 
 
 def metrics_from_preds(y_true, y_prob):
@@ -13,7 +12,7 @@ def metrics_from_preds(y_true, y_prob):
 
 def save_training_curves(history, outdir, title_prefix=""):
     ensure_dir(outdir)
-    # sccuracy
+    # accuracy
     plt.figure()
     plt.plot(history.history.get("accuracy", []), label="train_acc")
     plt.plot(history.history.get("val_accuracy", []), label="val_acc")

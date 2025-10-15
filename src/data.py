@@ -6,7 +6,6 @@ import tensorflow.keras as K
 import keras_cv as kcv
 from src.utils import short_ok, short_warn
 import cv2, random
-import numpy as np
 
 CLASSES = ["rock", "paper", "scissors"]
 
@@ -72,7 +71,7 @@ def strong_photo_aug(img_bgr: np.ndarray) -> np.ndarray: # flip, rotate, contras
 def opencv_strong_augment_np(img_rgb: np.ndarray) -> np.ndarray: # combo of green removal and strong aug
     bgr = (np.clip(img_rgb, 0.0, 1.0) * 255.0).astype(np.uint8)[:, :, ::-1]
     if random.random() < 0.5:  # 50% chance to remove green background
-        bgr = remove_green_bg(bgr)
+        bgr = remove_green_bg(bgr) 
     bgr = strong_photo_aug(bgr)
     rgb = bgr[:, :, ::-1].astype(np.float32) / 255.0
     return np.clip(rgb, 0.0, 1.0)
@@ -115,7 +114,7 @@ def build_ds(paths, labels, img_size=(128,128), batch_size=32,
             ds = ds.map(lambda x, y: (aug(x, training=True), y),
                         num_parallel_calls=AUTOTUNE)
 
-        elif augment_policy == "randaugment":
+        elif augment_policy == "randaugment": # package 
             randaug = kcv.layers.RandAugment(
                 value_range=(0.0, 1.0),
                 augmentations_per_image=rand_n,  # N

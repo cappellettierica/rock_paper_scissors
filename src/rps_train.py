@@ -18,13 +18,16 @@ def main(cfg_path="configs/default.yaml"):
         cfg = yaml.safe_load(f)
 
     # config
-    set_seed(cfg.get("seed", 42))
+    seed      = cfg.get("seed", 42)
     data_dir  = cfg["data_dir"]
     img_size  = tuple(cfg["img_size"])
     batch_sz  = int(cfg["batch_size"])
     test_s    = float(cfg["test_size"])
     val_s     = float(cfg["val_size"])
     model_cfgs = cfg["models"]
+    hp        = cfg.get("hparam_search", None)
+
+    set_seed(seed)
 
     # outputs
     out_dir = "outputs"
@@ -69,6 +72,7 @@ def main(cfg_path="configs/default.yaml"):
 
         save_training_curves(hist, figs_dir, name)
 
+        # test eval
         yt_true = np.argmax([y for _, y in ds_test.unbatch().batch(1)], axis=2).flatten()
         yt_prob = model.predict(ds_test, verbose=0)
         acc, prec, rec, f1, _ = metrics_from_preds(yt_true, yt_prob)
@@ -83,11 +87,10 @@ def main(cfg_path="configs/default.yaml"):
         params = int(np.sum([np.prod(v.shape) for v in model.trainable_variables]))
         comp_rows.append([name, params, acc, prec, rec, f1, train_time])
 
-    for name in ["tiny_cnn", "small_cnn", "medium_base_cnn"]:
+    for name in ["tiny_cnn", "small_cnn"]:
         train_one(name, model_cfgs[name])
 
 # applying hp tuning to medium_base_cnn to get my medium_cnn
-    hp = cfg.get("hparam_search", None) 
     if hp and hp.get("model") == "medium_base_cnn":
         base = dict(model_cfgs["medium_base_cnn"])
         dev_X = np.array(list(X_train) + list(X_val))
@@ -102,7 +105,7 @@ def main(cfg_path="configs/default.yaml"):
                 for bs in hp["batch_sizes"]:
                     scores = []
                     for tr, va in kf.split(dev_X, dev_y):
-                        ds_tr = build_ds(dev_X[tr], dev_y[tr], img_size, int(bs), shuffle=True, augment=True,seed=cfg.get("seed", 42),augment_policy=base.get("augment", "none"))
+                        ds_tr = build_ds(dev_X[tr], dev_y[tr], img_size, int(bs), shuffle=True, augment=True,seed=seed,augment_policy=base.get("augment", "green_strong"))
                         ds_va = build_ds(dev_X[va], dev_y[va], img_size, int(bs), shuffle=False, augment=False)
                         m = make_model("medium_base", img_size, float(dp)); compile_model(m, float(lr))
                         # h = m.fit(ds_tr, validation_data=ds_va, epochs=max(5, int(base["epochs"]*0.4)), verbose=0)
@@ -122,7 +125,7 @@ def main(cfg_path="configs/default.yaml"):
 
         # final retrain with SAME strong aug as small_cnn (fair comparison) → save as medium_cnn
         ds_dev = build_ds(dev_X, dev_y, img_size, best["batch"], shuffle=True, augment=True,
-                          seed=cfg.get("seed",42), augment_policy="green_strong").cache().prefetch(tf.data.AUTOTUNE)
+                          seed=seed, augment_policy="green_strong").cache().prefetch(tf.data.AUTOTUNE)
         m = make_model("medium_base", img_size, float(best["dropout"]))
         compile_model(m, float(best["lr"]))
         hist = m.fit(ds_dev, epochs=int(base["epochs"]), verbose=2)

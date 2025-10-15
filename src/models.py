@@ -23,33 +23,14 @@ def TinyCNN(img_size=(128, 128, 3), num_classes=3, dropout=0.2):
                       stages=[(16, 1), (32, 1)])
 
 def SmallCNN(img_size=(128, 128, 3), num_classes=3, dropout=0.3):
-    # [Conv 32 x2] -> Pool -> [Conv 64 x1] -> Pool -> [Conv 128 x1] -> GAP -> Dropout -> Dense
+    # [Conv 32 x2] -> Pool -> [Conv 64 x1] -> GAP -> Dropout -> Dense
     return _build_cnn("SmallCNN", img_size, num_classes, dropout,
-                      stages=[(32, 2), (64, 1), (128, 1)])
+                      stages=[(32, 2), (64, 1)])
 
 def MediumBaseCNN(img_size=(128, 128, 3), num_classes=3, dropout=0.4):
-    # Slightly larger than SmallCNN, but still lightweight
     # [Conv32 x2] -> Pool -> [Conv64 x2] -> Pool -> [Conv128 x1] -> GAP -> Dropout -> Dense
     return _build_cnn("MediumBaseCNN", img_size, num_classes, dropout,
                       stages=[(32, 2), (64, 2), (128, 1)])
-
-"""
-def MediumBaseCNN(img_size=(128, 128, 3), num_classes=3, dropout=0.4):
-    # uses stride-2 conv instead of all maxpools for smoother downsampling.
-    # [Conv 32 x2] -> stride2 -> [Conv 64 x2] -> stride2 -> [Conv 128 x2] -> GAP -> Dropout -> Dense
-    I = tf.keras.Input(img_size)
-    x = I
-    for f in [32, 64, 128]:
-        x = tf.keras.layers.Conv2D(f, 3, padding="same", activation="relu")(x)
-        x = tf.keras.layers.BatchNormalization()(x)
-        x = tf.keras.layers.Conv2D(f, 3, padding="same", activation="relu")(x)
-        x = tf.keras.layers.BatchNormalization()(x)
-        x = tf.keras.layers.Conv2D(f, 3, strides=2, padding="same", activation="relu")(x)
-    x = tf.keras.layers.GlobalAveragePooling2D()(x)
-    x = tf.keras.layers.Dropout(dropout)(x)
-    O = tf.keras.layers.Dense(num_classes, activation="softmax")(x)
-    return tf.keras.Model(I, O, name="MediumBaseCNN")
-    """
 
 def compile_model(model, lr=1e-3, label_smoothing=0.05): # label smoothing, wasn't generalsing well before 
     opt = tf.keras.optimizers.Adam(learning_rate=lr)

@@ -3,11 +3,11 @@ seed: 42 # reproducibility
 data_dir: "data"
 
 # image settings
-img_size: [128, 128]    # resize because 200x300 takes 2h to run. compare accurancy?
+img_size: [128, 128]    
 batch_size: 32          # of images processed together
 test_size: 0.15         
 val_size: 0.15          
-augment: true           # image augmentation for training 
+# augment: true           # image augmentation for training 
 
 models:
   tiny_cnn:
@@ -36,4 +36,3 @@ hparam_search:
   learning_rates: [0.0005, 0.001]
   dropouts: [0.4, 0.5]
   batch_sizes: [32]
-  max_trials: 4
