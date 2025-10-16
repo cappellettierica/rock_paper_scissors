@@ -90,7 +90,7 @@ def main(cfg_path="configs/default.yaml"):
     for name in ["tiny_cnn", "small_cnn"]:
         train_one(name, model_cfgs[name])
 
-# applying hp tuning to medium_base_cnn to get my medium_cnn
+# applying hp tuning to medium_base_cnn to get medium_cnn
     if hp and hp.get("model") == "medium_base_cnn":
         base = dict(model_cfgs["medium_base_cnn"])
         dev_X = np.array(list(X_train) + list(X_val))
@@ -123,7 +123,7 @@ def main(cfg_path="configs/default.yaml"):
         save_json({"results": results, "best": best}, os.path.join(rep_dir, "hparam_search_medium_base_cnn_cv.json"))
         short_ok(f"[HP] Best combo: {best} (mean val acc={round(best_cv,4)})")
 
-        # final retrain with best lr and best dropout 
+        # final retrain with best lr and best dropout
         ds_dev = build_ds(dev_X, dev_y, img_size, best["batch"], shuffle=True, augment=True,
                           seed=seed, augment_policy="green_strong").cache().prefetch(tf.data.AUTOTUNE)
         m = make_model("medium_base", img_size, float(best["dropout"]))

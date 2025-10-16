@@ -28,7 +28,7 @@ def MediumBaseCNN(img_size=(128, 128, 3), num_classes=3, dropout=0.4):
     return _build_cnn("MediumBaseCNN", img_size, num_classes, dropout,
                       stages=[(32, 2), (64, 2), (128, 1)])
 
-def compile_model(model, lr=1e-3, label_smoothing=0.05): # label smoothing, wasn't generalsing well before 
+def compile_model(model, lr=1e-3, label_smoothing=0.05): # label smoothing, wasn't generalsing well without 
     opt = tf.keras.optimizers.Adam(learning_rate=lr)
     loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=label_smoothing)
     model.compile(optimizer=opt, loss=loss, metrics=["accuracy"])
