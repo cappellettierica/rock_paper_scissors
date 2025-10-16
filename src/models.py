@@ -1,10 +1,6 @@
 import tensorflow as tf
 
 def _build_cnn(name, img_size, num_classes, dropout, stages):
-    """
-    stages: list of (filters, n_convs) tuples.
-            MaxPooling2D is applied AFTER each stage except the last one.
-    """
     I = tf.keras.Input(img_size)
     x = I
     for i, (f, n) in enumerate(stages):

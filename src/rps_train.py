@@ -123,7 +123,7 @@ def main(cfg_path="configs/default.yaml"):
         save_json({"results": results, "best": best}, os.path.join(rep_dir, "hparam_search_medium_base_cnn_cv.json"))
         short_ok(f"[HP] Best combo: {best} (mean val acc={round(best_cv,4)})")
 
-        # final retrain with SAME strong aug as small_cnn (fair comparison) → save as medium_cnn
+        # final retrain with best lr and best dropout 
         ds_dev = build_ds(dev_X, dev_y, img_size, best["batch"], shuffle=True, augment=True,
                           seed=seed, augment_policy="green_strong").cache().prefetch(tf.data.AUTOTUNE)
         m = make_model("medium_base", img_size, float(best["dropout"]))
